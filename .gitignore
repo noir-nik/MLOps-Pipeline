@@ -1,0 +1,32 @@
+# Files without extension in project folder
+*
+!*/
+!*.*
+!Makefile
+!LICENSE
+
+# IDE
+.vscode/
+.vscode/*
+*.code-workspace
+
+# Log files
+*.ini
+*.log
+logs/*
+
+# Archives
+*.zip
+*.rar
+*.7z
+*.tar.gz
+*.tgz
+*.tar.xz
+*.tar
+*.tar.bz2
+
+venv/
+__pycache__/
+data/*
+runtime
+config.yaml
