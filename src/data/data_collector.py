@@ -25,7 +25,6 @@ class DataCollector:
             "last_update": None,
             "data_sources": [],
             "column_types": {},
-            "batches_info": []
         }
         self.metadata_path = os.path.join(RAW_DATA_DIR, "metadata.json")
         self.load_metadata()
@@ -71,7 +70,13 @@ class DataCollector:
             self.metadata["total_records"] = len(df)
             self.metadata["data_sources"].append(file_path)
             self.metadata["column_types"] = {col: str(dtype) for col, dtype in df.dtypes.items()}
-            
+            self.metadata["records"] = len(df)
+            self.metadata["columns"] = len(df.columns)
+            self.metadata["missing_values"] = df.isna().sum().to_dict()
+            self.metadata["missing_percentage"] = (df.isna().sum() / len(df) * 100).to_dict()
+            self.metadata["categorical_columns"] = list(df.select_dtypes(include=['object', 'category']).columns)
+            self.metadata["numerical_columns"] = list(df.select_dtypes(include=['int64', 'float64']).columns)
+            self.metadata["memory_usage"] = df.memory_usage(deep=True).sum() / (1024 * 1024)  # MB
             # Create simulated stream batches
             self.create_batches(df)
             self.save_metadata()

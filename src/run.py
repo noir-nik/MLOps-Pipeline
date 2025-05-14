@@ -49,6 +49,9 @@ def main():
     config = Config(CONFIG_PATH)
     model_trainer = ModelTrainer(config)
 
+    target_column = "Profit"
+    drop_columns = ["Date", "Order_Quantity", "Unit_Cost", "Unit_Price", "Revenue"]
+
     if args.mode == "inference":
         if not args.file:
             logger.error("File path must be provided for inference mode.")
@@ -73,9 +76,11 @@ def main():
         batch, batch_id = data_collector.get_next_batch()
         if batch_id < 0:
             return False
+
         X_train_prepared, X_test_prepared, y_train, y_test = data_preparer.prepare_data(
-            batch, "Revenue", ["Date"]
+            batch, target_column, drop_columns
         )
+
         train_result = None
         if batch_id == 0 or 1:
             model_trainer.train_models(X_train_prepared, y_train, X_test_prepared, y_test, batch_id)
@@ -103,7 +108,7 @@ def main():
             logger.error("No data available for report generation.")
             return
         X_train_prepared, X_test_prepared, y_train, y_test = data_preparer.prepare_data(
-            batch, "Revenue", ["Date"]
+            batch, target_column, drop_columns 
         )
         model_visualizer = ModelVisualizer()
         model_visualizer.compare_models()
@@ -112,7 +117,7 @@ def main():
         if not data_collector.generate_eda_report(batch, batch_id):
             return
     else:
-        logger.error("Invalid mode. Please choose from: inference, update, or summary.")
+        logger.error("Invalid mode. Please choose from: inference, update, summary or report.")
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,83 @@
+name: MLOps Pipeline CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+env:
+  TRAINING_ITERATIONS: 3
+
+jobs:
+  iterative-taining:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Configure Kaggle API
+      env:
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+        KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+      run: |
+        mkdir -p ~/.kaggle
+        echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
+        chmod 600 ~/.kaggle/kaggle.json
+    
+    - name: Download model state from previous runs
+      uses: actions/download-artifact@v4
+      with:
+        name: model-state
+        path: runtime/models/
+      continue-on-error: true
+    
+    - name: Download data state from previous runs
+      uses: actions/download-artifact@v4
+      with:
+        name: data-state
+        path: runtime/data/
+      continue-on-error: true
+    
+    - name: Run iterative training
+      run: |
+        for i in $(seq 1 $TRAINING_ITERATIONS); do
+          echo "Starting training iteration $i of $TRAINING_ITERATIONS"
+          python src/run.py -mode "update"
+          echo "Completed training iteration $i"
+        done
+    
+    - name: Upload model artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: model-state
+        path: |
+          runtime/models/best_model.pkl
+        retention-days: 5
+      
+    - name: Upload data state
+      uses: actions/upload-artifact@v4
+      with:
+        name: data-state
+        path: |
+          runtime/data/data_state.json
+        retention-days: 5
+    
+    - name: Upload training logs
+      uses: actions/upload-artifact@v4
+      with:
+        name: training-logs
+        path: |
+          runtime/logs/
+        retention-days: 5

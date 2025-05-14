@@ -20,13 +20,17 @@ MLOps pipeline for building machine learning models on streaming data and automa
 
 ```
 mlops-pipeline/
+├── .github/
+│   └── workflows/
+│       └── mlops-workflow.yml   # CI/CD workflow definition
+├── doc/                         # Documentation
 ├── src/
-│   ├── data/                   # Data processing
-│   ├── model/                  # Model training and serving
-│   └── run.py                  # Main CLI interface
-├── runtime/                    # Runtime data storage
-├── requirements.txt            # Python dependencies
-└── README.md                   # Project documentation
+│   ├── data/                    # Data processing
+│   ├── model/                   # Model training and serving
+│   └── run.py                   # Main CLI interface
+├── runtime/                     # Runtime data storage
+├── requirements.txt             # Python dependencies
+└── README.md                    # Project documentation
 ```
 
 ## Installation
@@ -63,8 +67,31 @@ python src/run.py -mode "update"
 Output: "true" if successful, "false" if failed
 
 ### 3. Summary Mode
-Generate monitoring report:
+Generate report comparing the model performance:
 ```bash
 python src/run.py -mode "summary"
 ```
 Output: Path to generated report file
+
+### 4. Report Mode
+Generate detailed report and visualizations:
+```bash
+python src/run.py -mode "report"
+```
+
+## CI/CD Pipeline
+
+This project includes a GitHub Actions workflow for continuous integration and deployment of the ML pipeline.
+
+**CI/CD Features**:
+   - Automatic model training on push/pull requests
+   - Scheduled daily incremental training
+   - Preservation of model state between runs
+   - Training logs and summary reports as downloadable artifacts
+
+### Customizing the Workflow
+
+The workflow can be customized by modifying the following parameters in `.github/workflows/iterative_taining.yml`:
+
+- `TRAINING_ITERATIONS`: Number of training iterations per workflow run
+- Scheduled training frequency (cron)

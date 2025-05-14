@@ -12,8 +12,7 @@ from sklearn.discriminant_analysis import StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
-
+from sklearn.preprocessing import OneHotEncoder, MinMaxScaler, RobustScaler
 
 class DataPreparer:
     """Prepares data for model training"""
@@ -32,12 +31,22 @@ class DataPreparer:
     def prepare_data(self, df: pd.DataFrame, target_column: str, drop_columns: list = []) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Prepare data for model training"""
 
+        X = df
+
+        # Add features
+        X = self.add_features(X)
+        
         # Split features and target
         X = df.drop(columns=[target_column])
         y = df[target_column]
 
         # Drop columns (if specified)
         X = X.drop(columns=drop_columns)
+        
+        # Drop rows with missing values in target column
+        X = X[y.notnull()]
+        y = y[y.notnull()]
+
         
         # Split data into train and test sets
         X_train, X_test, y_train, y_test = train_test_split(
@@ -54,6 +63,18 @@ class DataPreparer:
         
         logger.info(f"Data prepared: X_train shape = {X_train_prepared.shape}, X_test shape = {X_test_prepared.shape}")
         return X_train_prepared, X_test_prepared, y_train, y_test
+    
+    def add_features(self, X: pd.DataFrame) -> pd.DataFrame:
+        """Add temporal, derivative and interaction features"""
+        
+        # Temporal features
+        X['Date'] = pd.to_datetime(X['Date'], errors='coerce')
+        X['is_holiday_season'] = X['Date'].dt.month.isin([11, 12]).astype(int)
+        X['quarter'] = X['Date'].dt.quarter
+        if 'weekday' in X.columns:
+            X['is_weekend'] = X['weekday'].isin([5, 6]).astype(int)
+        
+        return X
     
     def build_preprocessor(self, X: pd.DataFrame):
         """Build data preprocessing pipeline"""
@@ -74,10 +95,14 @@ class DataPreparer:
         if self.handle_numerical and numerical_cols:
             numerical_transformer = Pipeline(steps=[
                 ('imputer', SimpleImputer(strategy='median')),
-                ('scaler', StandardScaler() if self.scaling else 'passthrough')
+                ('scaler', StandardScaler() if self.scaling == 'standard' else
+                        MinMaxScaler() if self.scaling == 'minmax' else
+                        RobustScaler() if self.scaling == 'robust' else
+                        'passthrough')
             ])
             transformers.append(('numerical', numerical_transformer, numerical_cols))
         
+
         # Create preprocessor
         self.preprocessor = ColumnTransformer(transformers=transformers)
         self.preprocessor.fit(X)
@@ -87,7 +112,6 @@ class DataPreparer:
             pickle.dump(self.preprocessor, f)
         
         logger.info("Preprocessor built and saved")
-    
     def load_preprocessor(self):
         """Load preprocessor from file"""
         if os.path.exists(self.preprocessor_path):
@@ -99,6 +123,7 @@ class DataPreparer:
     
     def transform_data(self, df: pd.DataFrame) -> np.ndarray:
         """Transform data using the built preprocessor"""
+        self.add_features(df)
         if self.preprocessor is None:
             if not self.load_preprocessor():
                 raise ValueError("Preprocessor not available. Train model first.")

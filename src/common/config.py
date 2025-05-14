@@ -44,7 +44,7 @@ class Config:
                 "random_state": 42,
                 "handle_categorical": True,
                 "handle_numerical": True,
-                "scaling": True,
+                "scaling": "standard",
             },
             "model_training": {
                 "algorithms": ["linear_regression", "knn", "decision_tree"],
