@@ -3,9 +3,11 @@ name: MLOps Pipeline CI/CD
 on:
   push:
     branches:
+      - master
       - main
   pull_request:
     branches:
+      - master
       - main
   schedule:
     - cron: '0 0 * * *'
@@ -37,17 +39,23 @@ jobs:
         chmod 600 ~/.kaggle/kaggle.json
     
     - name: Download model state from previous runs
-      uses: actions/download-artifact@v4
+      uses: dawidd6/action-download-artifact@v6
       with:
+        workflow: iterative_taining.yml
         name: model-state
         path: runtime/models/
+        workflow_conclusion: success
+        branch: master
       continue-on-error: true
     
     - name: Download data state from previous runs
-      uses: actions/download-artifact@v4
+      uses: dawidd6/action-download-artifact@v6
       with:
+        workflow: iterative_taining.yml
         name: data-state
         path: runtime/data/
+        workflow_conclusion: success
+        branch: master
       continue-on-error: true
     
     - name: Run iterative training
@@ -62,22 +70,16 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: model-state
-        path: |
-          runtime/models/best_model.pkl
-        retention-days: 5
+        path: runtime/models/best_model.pkl
       
     - name: Upload data state
       uses: actions/upload-artifact@v4
       with:
         name: data-state
-        path: |
-          runtime/data/data_state.json
-        retention-days: 5
+        path: runtime/data/data_state.json
     
     - name: Upload training logs
       uses: actions/upload-artifact@v4
       with:
         name: training-logs
-        path: |
-          runtime/logs/
-        retention-days: 5
+        path: runtime/logs/
