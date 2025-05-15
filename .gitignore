@@ -27,6 +27,10 @@ logs/*
 
 venv/
 __pycache__/
-data/*
-runtime
+runtime/*
+!runtime/data/
+runtime/data/*
+!runtime/data/raw
+runtime/data/raw/*
+!runtime/data/raw/Sales.csv
 config.yaml
