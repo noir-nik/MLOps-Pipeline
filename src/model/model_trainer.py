@@ -70,15 +70,18 @@ class ModelTrainer:
         
         for name, model in models:
             start_time = time.time()
-            
             model.fit(X_train, y_train)
-            
+            training_time = time.time() - start_time
+
+            start_time = time.time()
             y_pred = model.predict(X_test)
+            prediction_time = time.time() - start_time
             
             rmse = np.sqrt(mean_squared_error(y_test, y_pred))
             mae = mean_absolute_error(y_test, y_pred)
             r2 = r2_score(y_test, y_pred)
             
+            start_time = time.time()
             cv_scores = {}
             if self.validation_method == "cv":
                 cv_scores = cross_val_score(model, X_train, y_train, cv=self.cv_folds, scoring='neg_mean_squared_error')
@@ -90,7 +93,7 @@ class ModelTrainer:
             else:
                 cv_rmse = rmse
             
-            training_time = time.time() - start_time
+            metrics_time = time.time() - start_time
             
             # Store model results
             model_info = {
@@ -104,6 +107,8 @@ class ModelTrainer:
                     "cv_rmse": float(cv_rmse)
                 },
                 "training_time": training_time,
+                "prediction_time": prediction_time,
+                "metrics_time": metrics_time,
                 "model_path": os.path.join(MODELS_DIR, f"{name}_batch_{batch_id}.pkl")
             }
             
@@ -168,15 +173,18 @@ class ModelTrainer:
         else:
             logger.warning(f"Unknown model type: {model_type}, retraining from scratch")
             self.best_model.fit(X_new, y_new)
+        training_time = time.time() - start_time
         
         # Get predictions
+        start_time = time.time()
         y_pred = self.best_model.predict(X_test)
+        prediction_time = time.time() - start_time
         
+        start_time = time.time()
         rmse = np.sqrt(mean_squared_error(y_test, y_pred))
         mae = mean_absolute_error(y_test, y_pred)
         r2 = r2_score(y_test, y_pred)
-        
-        training_time = time.time() - start_time
+        metrics_time = time.time() - start_time
         
         # Update model info
         model_info = {
@@ -189,6 +197,8 @@ class ModelTrainer:
                 "r2": float(r2)
             },
             "training_time": training_time,
+            "prediction_time": prediction_time,
+            "metrics_time": metrics_time,
             "model_path": os.path.join(MODELS_DIR, f"retrained_{model_type}_batch_{batch_id}.pkl")
         }
         
@@ -215,7 +225,9 @@ class ModelTrainer:
                 "mae": float(mae),
                 "r2": float(r2)
             },
-            "training_time": training_time
+            "training_time": training_time,
+            "prediction_time": prediction_time,
+            "metrics_time": metrics_time
         }
 
     def predict(self, X: np.ndarray) -> np.ndarray:

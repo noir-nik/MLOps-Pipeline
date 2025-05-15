@@ -84,9 +84,9 @@ class ModelVisualizer:
                     plt.figure(figsize=(10, 6))
                     # Sort by importance
                     sorted_features = dict(
-                        sorted(feature_importance.items(), key=lambda item: item[1], reverse=True)
+                        sorted(feature_importance.items(), key=lambda item: item[1], reverse=True)[:15]
                     )
-                    plt.bar(sorted_features.keys(), sorted_features.values())
+                    plt.bar(list(sorted_features.keys()), list(sorted_features.values()))
                     plt.xticks(rotation=90)
                     plt.title(f"Feature Importance for {model_type}")
                     plt.tight_layout()
@@ -99,7 +99,7 @@ class ModelVisualizer:
                 if feature_names is None:
                     feature_names = [f"feature_{i}" for i in range(self.best_model.n_features_in_)]
                     
-                plt.figure(figsize=(20, 10))
+                plt.figure(figsize=(20, 10), dpi=300)
                 tree.plot_tree(self.best_model, feature_names=feature_names, filled=True, rounded=True)
                 plt.title("Decision Tree Structure")
                 tree_viz_path = os.path.join(visualization_path, "decision_tree_structure.png")
@@ -186,6 +186,8 @@ class ModelVisualizer:
         r2_values = []
         mae_values = []
         training_times = []
+        prediction_times = []
+        metrics_times  = []
         batch_ids = []
         
         for model_info in self.models_info:
@@ -194,36 +196,50 @@ class ModelVisualizer:
             r2_values.append(model_info["metrics"]["r2"])
             mae_values.append(model_info["metrics"]["mae"])
             training_times.append(model_info["training_time"])
+            prediction_times.append(model_info["prediction_time"])
+            metrics_times.append(model_info["metrics_time"])
             batch_ids.append(model_info["batch_id"])
         
         comparison_dir = os.path.join(REPORTS_DIR, "model_comparison")
         os.makedirs(comparison_dir, exist_ok=True)
         
         # Performance metrics comparison
-        plt.figure(figsize=(12, 8))
+        plt.figure(figsize=(18, 12))
         
-        plt.subplot(2, 2, 1)
+        plt.subplot(3, 2, 1)
         plt.bar(model_names, r2_values)
         plt.xticks(rotation=90)
         plt.title("R2 Comparison")
         plt.tight_layout()
         
-        plt.subplot(2, 2, 2)
+        plt.subplot(3, 2, 2)
         plt.bar(model_names, rmse_values)
         plt.xticks(rotation=90)
         plt.title("RMSE Comparison")
         plt.tight_layout()
         
-        plt.subplot(2, 2, 3)
+        plt.subplot(3, 2, 3)
         plt.bar(model_names, mae_values)
         plt.xticks(rotation=90)
         plt.title("MAE Comparison")
         plt.tight_layout()
         
-        plt.subplot(2, 2, 4)
+        plt.subplot(3, 2, 4)
         plt.bar(model_names, training_times)
         plt.xticks(rotation=90)
         plt.title("Training Time Comparison (seconds)")
+        plt.tight_layout()
+        
+        plt.subplot(3, 2, 5)
+        plt.bar(model_names, prediction_times)
+        plt.xticks(rotation=90)
+        plt.title("Prediction Time Comparison (seconds)")
+        plt.tight_layout()
+        
+        plt.subplot(3, 2, 6)
+        plt.bar(model_names, metrics_times)
+        plt.xticks(rotation=90)
+        plt.title("Metrics Calculation Time Comparison (seconds)")
         plt.tight_layout()
         
         comparison_path = os.path.join(comparison_dir, "model_metrics_comparison.png")
@@ -237,12 +253,13 @@ class ModelVisualizer:
             "R2": r2_values,
             "RMSE": rmse_values,
             "MAE": mae_values,
-            "Training_Time": training_times
+            "Training_Time": training_times,
+            "Prediction_Time": prediction_times,
+            "Metrics_Time": metrics_times,
         })
         
         csv_path = os.path.join(comparison_dir, "model_metrics_comparison.csv")
-        comparison_df.to_csv(csv_path, index=False)
-        
+        comparison_df.to_csv(csv_path, index=False, float_format='%.4f')
         # Create performance for multiple batches
         if len(set(batch_ids)) > 1:
             try:
@@ -261,15 +278,16 @@ class ModelVisualizer:
                 
                 for model_type in model_types:
                     subset = comparison_df[comparison_df['Model_Type'] == model_type]
-                    plt.plot(subset['Batch'], subset['R2'], marker='o', label=f"{model_type}")
+                    best_model = subset.loc[subset.groupby('Batch')['R2'].idxmax()]
+                    plt.plot(best_model['Batch'], best_model['R2'], marker='o', label=f"{model_type}")
                 
                 plt.xlabel("Batch ID")
                 plt.ylabel("R2 Score")
-                plt.title("Model Performance Evolution Over Batches")
+                plt.title("Best Model Performance Evolution Over Batches")
                 plt.legend()
                 plt.grid(True, linestyle='--', alpha=0.7)
                 
-                evolution_path = os.path.join(comparison_dir, "model_evolution.png")
+                evolution_path = os.path.join(comparison_dir, "best_model_evolution.png")
                 plt.savefig(evolution_path)
                 plt.close()
                 
@@ -282,3 +300,4 @@ class ModelVisualizer:
             "csv_report": csv_path,
             "evolution_plot": evolution_path if len(set(batch_ids)) > 1 else None
         }
+
